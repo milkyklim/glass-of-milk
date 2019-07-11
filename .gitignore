@@ -1,2 +1,5 @@
+# checkpoints
 .ipynb_checkpoints/
-data
+# raw zips and output
+**data/raw
+**data/output
