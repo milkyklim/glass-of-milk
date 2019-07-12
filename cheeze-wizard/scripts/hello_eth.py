@@ -27,6 +27,7 @@ def get_contract(address):
         abi = json.load(f)
     return w3.eth.contract(address, abi=abi)
 
+# TODO: add caching, too
 def get_contract_abi(address):
     '''Get contract interface from Etherscan'''
     resp = requests.get(
@@ -39,44 +40,27 @@ def get_contract_abi(address):
     except json.JSONDecodeError:
         return None
 
+def get_wizards(contract):
+    '''Get all summoned wizards.'''
+    w_filename = 'wizards.pickle'
+    filepath = os.path.join(DATAPATH, 'input', w_filename)
+    if not os.path.exists(filepath):
+        # works on local node
+        # wizards = contract.events.WizardSummoned().getLogs(fromBlock=CW_BLOCK)
+        # works on infura
+        wizards = []
+        for start in tqdm(range(CW_BLOCK, w3.eth.blockNumber, 1000)):
+            end = min(start + 1000, w3.eth.blockNumber)
+            wizards.extend(contract.events.WizardSummoned().getLogs(fromBlock=start, toBlock=end))
+        with open(filepath, 'ab') as f:
+            pickle.dump(wizards, f)                      
+    wizards = pickle.load(open(filepath, 'rb'))
+    return wizards
+
+
 
 if __name__ == "__main__":
-    # abi = get_contract_abi(CW_ADDRESS)
-    # print('got abi')
-    # contract = w3.eth.contract(CW_ADDRESS, abi=abi)
-    # print('got contract')
-
-    get_contract(CW_ADDRESS)
-
-
-    # # this works on the local node
-    # # logs = contract.events.WizardSummoned().getLogs(fromBlock=CW_BLOCK)
-    # # this one works with infura
-    # # logs = []
-    # # for start in tqdm(range(CW_BLOCK, w3.eth.blockNumber, 1000)):
-    # #     end = min(start + 1000, w3.eth.blockNumber)
-    # #     logs.extend(contract.events.WizardSummoned().getLogs(fromBlock=start, toBlock=end))
-    # # this one for loading data
-    # logs = pickle.load(open('wiz.pickle', 'rb'))
-    # print(len(logs))
-    # # for k in logs:
-    # #     # print(k['args']['element'], k['args']['power'])
-    # #     print(k)
-
-
-    # # d = []
-    # # for start in tqdm(range(CW_BLOCK, w3.eth.blockNumber, 1000)):
-    # #     end = min(start + 1000, w3.eth.blockNumber)
-    # #     d.extend(contract.events.Transfer().getLogs(fromBlock=start, toBlock=end))
-
-    # # dbfile = open('transfer.pickle', 'ab') 
-    # # pickle.dump(d, dbfile)                      
-    # # dbfile.close() 
-
-
-    # transfers = pickle.load(open('transfer.pickle', 'rb'))
-    # print(len(transfers))
-
-    # for k in transfers:
-    #     # print(k['args']['element'], k['args']['power'])
-    #     print(k['args']['from'])
+    contract = get_contract(CW_ADDRESS)
+    print('got contract')
+    wizards = get_wizards(contract)
+    print('got wizards')
